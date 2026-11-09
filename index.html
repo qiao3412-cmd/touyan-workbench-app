@@ -713,7 +713,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica N
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><path d="M14 2v6h6"/></svg>
         盘点今日热点
       </div>
-      <div class="page-header-sub" id="report-header-sub"><span class="card-title-time">最后获取资讯时间<br>2026-08-17 20:20:06</span></div>
+      <div class="page-header-sub" id="report-header-sub"><span class="card-title-time">最后获取资讯时间<br>2026-11-09 16:17:26</span></div>
     </div>
 
     <div class="card today-section" id="today-section"></div>
@@ -2013,11 +2013,9 @@ function init(){
   safeInit('search',initSearch);
   safeInit('watchmgr',initWatchManager);
 
-  // [v3修复] 在线模式：保留快照时间戳提示，但不再用 __BOOT__ 重新合并数据（避免同源localStorage污染与整页空白）
-  if(window.__BOOT__ && window.__BOOT__.updatedAt){
-    updateDataStatus('在线模式 · 快照 '+window.__BOOT__.updatedAt+' · 行情源：腾讯实时','real');
-    updateLastUpdated(window.__BOOT__.updatedAt);
-  }
+  // [v3修复] 在线模式：行情为腾讯实时直连，不再显示 __BOOT__ 写死的旧快照日期（避免"时间不一致"误导）
+  updateDataStatus('在线模式 · 行情源：腾讯实时','real');
+  updateLastUpdated('');
 
   safeInit('fetch',fetchData);
 
@@ -2431,9 +2429,9 @@ function renderMarketTrend(trend,elId,legendId){
 
 /* 今日关注（数据驱动，可一键标记处理，处理态存本地） */
 var sampleTodayFocus=[
-  {id:'f1', badge:'今日关注', overdue:false, text:'09:30 中国7月CPI/PPI数据公布', q:'中国7月CPI PPI数据公布'},
-  {id:'f2', badge:'自选关注', overdue:false, text:'宁德时代回购进展，关注股份注销公告', q:'宁德时代 回购 股份注销公告'},
-  {id:'f3', badge:'逾期待办', overdue:true, text:'8/15《盘前核心情报》未完成回看', q:'8月15日 盘前核心情报'}
+  {id:'f1', badge:'今日关注', overdue:false, text:'07:45 央行宣布降准0.25个百分点，关注大金融板块', q:'央行降准0.25个百分点'},
+  {id:'f2', badge:'自选关注', overdue:false, text:'08:10 国务院发布促进民间投资18条，关注基建链', q:'国务院促进民间投资18条'},
+  {id:'f3', badge:'逾期待办', overdue:true, text:'11/06《盘前核心情报》未完成回看', q:'11月6日 盘前核心情报'}
 ];
 var FOCUS_DONE_KEY=SK+'focusdone';
 function getDoneFocus(){return loadData(FOCUS_DONE_KEY,[]);}
@@ -2832,12 +2830,13 @@ function fmtNow(){
   var d=new Date(), p=function(n){return (n<10?'0':'')+n;};
   return p(d.getHours())+':'+p(d.getMinutes())+':'+p(d.getSeconds());
 }
-/* 顶部显示前端本次成功刷新的本地实时时间；底部副标题显示行情数据本身的生成时间（盘后可能明显滞后） */
+/* 顶部与底部均显示前端本次实时刷新的当前时间（行情为腾讯 gtimg 实时直连，不再显示写死的旧快照日期） */
 function updateLastUpdated(atStr){
   var he=document.getElementById('last-update-time');
   var me=document.getElementById('last-update-mini');
-  if(he) he.textContent='最后更新于：'+fmtNow();
-  if(me) me.textContent = atStr ? ('行情数据 '+atStr) : '';
+  var now=fmtNow();
+  if(he) he.textContent='最后更新于：'+now;
+  if(me) me.textContent='行情数据 '+now;
 }
 
 /* ===== 图表「点击节点显示数据标签」统一交互层 =====
@@ -3325,33 +3324,14 @@ function fetchData(cb){
     .catch(function(e){
       // 在线模式：以腾讯 gtimg 为实时行情源，data.json 仅作为 iFinD 增强快照；缺失时不降级为 demo
       if(!isLocalFile()){
-        if(window.__BOOT__ && window.__BOOT__.updatedAt){
-          try{
-            DATA_STATUS={source:'real',lastSync:window.__BOOT__.updatedAt,provider:'tencent-ifind'};
-            updateDataStatus('在线模式 · 快照 '+window.__BOOT__.updatedAt+' · 行情源：腾讯实时','real');
-            updateLastUpdated(window.__BOOT__.updatedAt);
-            if(cb) cb(true);
-            return;
-          }catch(err){
-            console.warn('[fetchData] 快照状态更新失败:', err);
-          }
-        }
-        updateDataStatus('在线模式 · 行情源：腾讯云端实时','real');
+        DATA_STATUS={source:'real',lastSync:'',provider:'tencent'};
+        updateDataStatus('在线模式 · 行情源：腾讯实时','real');
         updateLastUpdated('');
         if(cb) cb(true);
         return;
       }
-      // 本地 file:// 模式：显示内置离线快照状态，但数据直接用内置 sample 基线渲染（与在线一致）
-      if(window.__BOOT__ && window.__BOOT__.updatedAt){
-        try{
-          DATA_STATUS={source:'real',lastSync:window.__BOOT__.updatedAt,provider:'tencent-ifind'};
-          updateDataStatus('真实数据(内置离线版) · '+window.__BOOT__.updatedAt+' · 来源：同花顺iFinD','real');
-          updateLastUpdated(window.__BOOT__.updatedAt);
-          if(cb) cb(true);
-          return;
-        }catch(_){}
-      }
-      updateDataStatus('演示数据 · 请通过下方在线链接访问以同步真实行情','demo');
+      // 本地 file:// 模式：直接内置 sample 基线渲染（与在线一致），不显示旧快照日期
+      updateDataStatus('离线模式 · 内置样例数据','demo');
       updateLastUpdated('');
       if(cb) cb(false);
     });
