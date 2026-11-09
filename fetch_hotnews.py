@@ -8,18 +8,20 @@
         -> 回写 sampleHotTopics（每主题 3-6 条，不足则取真实池中弱相关今日资讯填充）
 - 蓝框 time 取信息来源出处原始发布时间(HH:MM)；整段重建 hot-head 避免残留多余时间戳
 """
-import json, re, sys, subprocess, datetime, ssl
+import json, re, sys, subprocess, datetime, ssl, os
 from collections import Counter
 from urllib.request import Request, urlopen
 
-REPO  = r"G:/Workbuddy/publish/touyan-workbench-app"
+# 本地(Windows)用 G 盘绝对路径；GitHub Actions(Linux)用 GITHUB_WORKSPACE 环境变量
+REPO  = os.environ.get("GITHUB_WORKSPACE") or r"G:/Workbuddy/publish/touyan-workbench-app"
 INDEX = REPO + r"/index.html"
 UA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
 
 SINA_TPL  = "https://feed.mix.sina.com.cn/api/roll/get?pageid=153&lid=%d&num=40&order=0"
 WEIBO     = "https://weibo.com/ajax/side/hotSearch"
 # 全频道混合实时池（cutoff 36h 只保留今天真实新闻）
-MAIN_LIDS = [2510, 2511, 2513, 2514, 2515, 2516, 2517, 2518]
+# 2026-11-09 实测：2510/2511/2513/2514 已停更(数据停在 2023~2025)，仅保留活跃频道
+MAIN_LIDS = [2515, 2516, 2517, 2518]
 
 CUTOFF_HOURS = 36
 MIN_POOL = 6
