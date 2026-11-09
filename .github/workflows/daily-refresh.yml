@@ -1,0 +1,25 @@
+name: 每日热点资讯刷新
+
+on:
+  schedule:
+    # 北京时间每天 08:30（UTC 00:30）
+    - cron: '30 0 * * *'
+  workflow_dispatch: {}
+
+permissions:
+  contents: write
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: 运行热点抓取脚本
+        run: python fetch_hotnews.py
